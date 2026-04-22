@@ -8,6 +8,10 @@
   border-color: var(--border-bright);
   box-shadow: var(--shadow-card), 0 0 16px rgba(109,204,135,0.08);
 }
+.device-card.device-selected {
+  border-color: var(--dcolor);
+  box-shadow: var(--shadow-card), 0 0 0 2px color-mix(in srgb, var(--dcolor) 30%, transparent);
+}
 .device-card-top {
   display: flex;
   justify-content: space-between;

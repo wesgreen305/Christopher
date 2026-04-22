@@ -1,15 +1,16 @@
 import { BrowserRouter, Routes, Route, NavLink } from 'react-router-dom'
 import { useState, useEffect } from 'react'
 import Dashboard from './pages/Dashboard'
+import Zones from './pages/Zones'
+import Sensors from './pages/Sensors'
 import Devices from './pages/Devices'
 import Scheduler from './pages/Scheduler'
 import AlertsPage from './pages/Alerts'
-import Zones from './pages/Zones'
 import Settings from './pages/Settings'
 import { checkAlerts } from './api'
 import {
   LayoutDashboard, Cpu, CalendarClock, Bell, Droplets,
-  Wifi, WifiOff, Layers, Settings as SettingsIcon
+  Wifi, WifiOff, Layers, Activity, Settings as SettingsIcon
 } from 'lucide-react'
 import './App.css'
 
@@ -54,6 +55,9 @@ export default function App() {
             <NavLink to="/zones" className={({isActive}) => `nav-item ${isActive ? 'active' : ''}`}>
               <Layers size={16} /> Zones
             </NavLink>
+            <NavLink to="/sensors" className={({isActive}) => `nav-item ${isActive ? 'active' : ''}`}>
+              <Activity size={16} /> Sensors
+            </NavLink>
             <NavLink to="/devices" className={({isActive}) => `nav-item ${isActive ? 'active' : ''}`}>
               <Cpu size={16} /> Devices
             </NavLink>
@@ -81,6 +85,7 @@ export default function App() {
           <Routes>
             <Route path="/"          element={<Dashboard />} />
             <Route path="/zones"     element={<Zones />} />
+            <Route path="/sensors"   element={<Sensors />} />
             <Route path="/devices"   element={<Devices />} />
             <Route path="/scheduler" element={<Scheduler />} />
             <Route path="/alerts"    element={<AlertsPage />} />

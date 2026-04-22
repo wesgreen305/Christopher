@@ -74,3 +74,12 @@ def delete_schedule(schedule_id: int):
     conn.commit()
     conn.close()
     return {"status": "deleted"}
+
+@router.delete("/by-device/{device_id}")
+def delete_schedules_by_device(device_id: str):
+    conn = get_db()
+    c = conn.cursor()
+    c.execute("DELETE FROM schedules WHERE device_id=?", (device_id,))
+    conn.commit()
+    conn.close()
+    return {"status": "deleted", "rows": c.rowcount}

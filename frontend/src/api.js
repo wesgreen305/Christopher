@@ -15,6 +15,15 @@ export async function generateMockData() {
   return r.json()
 }
 
+export async function createSensorReading(data) {
+  const r = await fetch('/api/sensors/reading', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data)
+  })
+  return r.json()
+}
+
 export async function fetchDevices() {
   const r = await fetch(`${BASE}/devices/`)
   return r.json()

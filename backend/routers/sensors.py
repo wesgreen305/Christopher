@@ -74,35 +74,51 @@ def get_history(
 
 @router.post("/mock/generate")
 def generate_mock_data():
-    """Seed the DB with realistic mock sensor data for the last 48 hours."""
     conn = get_db()
     c = conn.cursor()
+
+    # Find every unique sensor_type + zone combination that exists in the DB
+    c.execute("""
+        SELECT DISTINCT sensor_type, zone, unit
+        FROM sensor_readings
+        ORDER BY zone, sensor_type
+    """)
+    existing = c.fetchall()
+
+    # Sensible base values per sensor type for realistic wave generation
+    SENSOR_DEFAULTS = {
+        'temperature':      (24.0, 1.5,  0.2),
+        'ph':               (7.1,  0.3,  0.05),
+        'dissolved_oxygen': (7.5,  0.8,  0.1),
+        'ammonia':          (0.2,  0.1,  0.02),
+        'nitrite':          (0.1,  0.05, 0.01),
+        'nitrate':          (20.0, 3.0,  0.5),
+        'tds':              (800.0,50.0, 5.0),
+        'water_level':      (35.0, 5.0,  0.5),
+    }
 
     now = datetime.utcnow()
     entries = []
 
-    sensor_profiles = [
-        # (sensor_id, sensor_type, zone, base, amplitude, noise, unit)
-        ("esp32_tank_01", "temperature",      "fish_tank", 24.0, 1.5, 0.2, "°C"),
-        ("esp32_tank_01", "ph",               "fish_tank",  7.1, 0.3, 0.05,"pH"),
-        ("esp32_tank_01", "dissolved_oxygen", "fish_tank",  7.5, 0.8, 0.1, "mg/L"),
-        ("esp32_tank_01", "ammonia",          "fish_tank",  0.2, 0.1, 0.02,"mg/L"),
-        ("esp32_tank_01", "nitrite",          "fish_tank",  0.1, 0.05,0.01,"mg/L"),
-        ("esp32_tank_01", "nitrate",          "fish_tank", 20.0, 3.0, 0.5, "mg/L"),
-        ("esp32_grow_01", "temperature",      "grow_bed",  22.0, 2.0, 0.3, "°C"),
-        ("esp32_grow_01", "tds",              "grow_bed", 800.0,50.0, 5.0, "ppm"),
-        ("esp32_grow_01", "water_level",      "grow_bed",  35.0, 5.0, 0.5, "cm"),
-    ]
+    for row in existing:
+        stype = row['sensor_type']
+        zone  = row['zone']
+        unit  = row['unit']
+        sensor_id = f"esp32_{zone.replace(' ', '_').lower()}_01"
 
-    # Generate a reading every 15 min for 48 hours = 192 points per sensor
-    for minutes_ago in range(48*60, -1, -15):
-        ts = now - timedelta(minutes=minutes_ago)
-        t = minutes_ago / 60.0  # hours ago
-        for sid, stype, zone, base, amp, noise, unit in sensor_profiles:
-            wave = math.sin(t * math.pi / 12)  # 24h cycle
-            val = base + amp * wave + random.gauss(0, noise)
-            val = round(max(0, val), 3)
-            entries.append((sid, stype, val, unit, zone, ts.isoformat()))
+        base, amp, noise = SENSOR_DEFAULTS.get(stype, (10.0, 1.0, 0.1))
+
+        for minutes_ago in range(48 * 60, -1, -15):
+            ts = now - timedelta(minutes=minutes_ago)
+            t  = minutes_ago / 60.0
+            wave = math.sin(t * math.pi / 12)
+            val  = base + amp * wave + random.gauss(0, noise)
+            val  = round(max(0, val), 3)
+            entries.append((sensor_id, stype, val, unit, zone, ts.isoformat()))
+
+    if not entries:
+        conn.close()
+        return {"status": "no_sensors", "message": "No sensors found. Add sensors first."}
 
     c.executemany(
         "INSERT INTO sensor_readings (sensor_id, sensor_type, value, unit, zone, timestamp) VALUES (?,?,?,?,?,?)",
@@ -110,4 +126,31 @@ def generate_mock_data():
     )
     conn.commit()
     conn.close()
-    return {"status": "ok", "inserted": len(entries)}
+    return {"status": "ok", "sensors_seeded": len(existing), "inserted": len(entries)}
+
+@router.delete("/delete")
+def delete_sensor(sensor_type: str, zone: str):
+    conn = get_db()
+    c = conn.cursor()
+
+    # Delete all sensor readings
+    c.execute(
+        "DELETE FROM sensor_readings WHERE sensor_type=? AND zone=?",
+        (sensor_type, zone)
+    )
+
+    # Delete any alert rules watching this sensor+zone combo
+    c.execute(
+        "DELETE FROM alert_rules WHERE sensor_type=? AND zone=?",
+        (sensor_type, zone)
+    )
+
+    # Delete any alert history for this sensor type
+    c.execute(
+        "DELETE FROM alert_history WHERE sensor_type=?",
+        (sensor_type,)
+    )
+
+    conn.commit()
+    conn.close()
+    return {"status": "deleted"}
