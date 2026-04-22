@@ -5,6 +5,7 @@ import {
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceLine
 } from 'recharts'
 import { Thermometer, Droplets, Wind, FlaskConical, RefreshCw, Zap } from 'lucide-react'
+import './Dashboard.css'
 
 const SENSOR_META = {
   temperature:      { label: 'Temperature',      unit: '°C',   color: '#f0a830', icon: Thermometer, safe: [18, 28] },
