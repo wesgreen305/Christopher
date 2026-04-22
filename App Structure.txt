@@ -1,0 +1,17 @@
+ChristopherOS/
+├── frontend/          # React dashboard
+│   ├── Dashboard      # Live sensor readings + charts
+│   ├── Devices        # Toggle pumps, lights, heaters
+│   ├── Scheduler      # Timed automation rules
+│   └── History        # Logs & trends
+│
+├── backend/           # FastAPI
+│   ├── /sensors       # Ingest & serve sensor data
+│   ├── /devices       # Control GPIO / relay states
+│   ├── /schedules     # Cron-style automation rules
+│   └── /alerts        # Threshold alerts (e.g. pH too low)
+│
+└── database/          # SQLite
+    ├── sensor_readings  # Time-series logs
+    ├── devices          # Device registry & current state
+    └── schedules        # Automation rules
