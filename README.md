@@ -1,13 +1,14 @@
-# 🌿 ChristopherOS
+# ChristopherOS
 
 A full-stack greenhouse & aquaponics management system. Monitor water quality, control devices, and automate your system from any browser on your local network.
 
 ---
 
 ## Next to do:
-Figure out where sensor.ino goes
-Check if files are structured correctly
-Implement __init__ files in each py package (db, models, routers)
+- Implement Sensors Page
+- Modify Dashboard to show Zones with sensors and devices inside
+- Update Schedules page to provide different views of the schedules
+- Update Zones page to have a List tab to accompany the map tab
 
 ## Features
 
@@ -156,10 +157,11 @@ Christopher/
 │   │   └── database.py              # SQLite connection, schema creation, seed data
 │   ├── routers/
 │   │   ├── __init__.py              # Python package marker (empty)
-│   │   ├── sensors.py               # Sensor ingestion, latest readings, history, mock data generator
+│   │   ├── alerts.py                # Threshold alert rules, alert checking, alert history
 │   │   ├── devices.py               # Device registry, toggle on/off, GPIO control hooks
 │   │   ├── schedules.py             # Automation rules — time-based on/off scheduling
-│   │   └── alerts.py                # Threshold alert rules, alert checking, alert history
+│   │   ├── sensors.py               # Sensor ingestion, latest readings, history, mock data generator
+│   │   └── zones.py                 # 
 │   └── models/
 │       └── __init__.py              # Python package marker (empty) — Pydantic models can be added here as the project grows
 ├── frontend/
@@ -174,14 +176,17 @@ Christopher/
 │       ├── index.css                # Design system — CSS variables, fonts, colors, animations
 │       ├── api.js                   # All fetch calls to the backend API in one place
 │       └── pages/
-│           ├── Dashboard.jsx        # Live sensor cards, status colors, line charts with safe ranges
-│           ├── Dashboard.css        # Sensor card styles, chart tabs, time range buttons
-│           ├── Devices.jsx          # Device grid, on/off toggles, zone filtering, add device modal
-│           ├── Devices.css          # Device card styles, status indicators, modal overlay
-│           ├── Scheduler.jsx        # Automation rules — day picker, time inputs, rules table
-│           ├── Scheduler.css        # Day picker buttons, time range display, schedule table styles
-│           ├── Alerts.jsx           # Alert rule management and triggered alert history log
-│           └── Alerts.css           # Alert rule styles, condition tags, severity indicators
+│       │   ├── Alerts.jsx           # Alert rule management and triggered alert history log
+│       │   ├── Alerts.css           # Alert rule styles, condition tags, severity indicators
+│       │   ├── Dashboard.jsx        # Live sensor cards, status colors, line charts with safe ranges
+│       │   ├── Dashboard.css        # Sensor card styles, chart tabs, time range buttons
+│       │   ├── Devices.jsx          # Device grid, on/off toggles, zone filtering, add device modal
+│       │   ├── Devices.css          # Device card styles, status indicators, modal overlay
+│       │   ├── Scheduler.jsx        # Automation rules — day picker, time inputs, rules table
+│       │   ├── Scheduler.css        # Day picker buttons, time range display, schedule table styles
+│       │   ├── Settings.jsx         # 
+│       │   └── Settings.css         #
+│       └── assets/
 └── esp32_sensor_node/
     └── sensor_node.ino             # Arduino sketch — reads temp/pH/DO sensors and POSTs to API over WiFi
 ```
