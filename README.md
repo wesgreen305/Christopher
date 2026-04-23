@@ -66,6 +66,12 @@ On first load, click **"Seed Mock Data"** on the dashboard. This generates 48 ho
 
 ---
 
+### GIT UPDATE SHORTCUT \NOT PRODUCTION SAFE, USE BRANCHES IN FUTURE\
+
+git add -A && git commit -m "update" && git push
+
+---
+
 ## Raspberry Pi Setup
 
 ### Auto-start on boot (systemd)
