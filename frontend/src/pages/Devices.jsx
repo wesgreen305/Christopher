@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react'
 import { fetchDevices, toggleDevice } from '../api'
 import { Zap, Droplets, Sun, Thermometer, Wind, Plus, RefreshCw, X, Trash2, Save } from 'lucide-react'
-import './Devices.css'
 
 const DEVICE_ICONS = {
   pump:   Droplets,
@@ -12,70 +11,29 @@ const DEVICE_ICONS = {
 }
 
 const DEVICE_COLORS = {
-  pump:   'var(--blue)',
-  light:  'var(--amber)',
-  heater: 'var(--red)',
-  fan:    'var(--green-bright)',
-  valve:  'var(--purple)',
+  pump:   '#4ab8d8',
+  light:  '#f0a830',
+  heater: '#e05555',
+  fan:    '#6dcc87',
+  valve:  '#9b7fe8',
+}
+
+const ZONE_COLORS = {
+  fish_tank:   { color: '#3b82f6', bg: '#dbeafe' },
+  grow_bed:    { color: '#22c55e', bg: '#dcfce7' },
+  sump:        { color: '#8b5cf6', bg: '#ede9fe' },
+  greenhouse:  { color: '#f59e0b', bg: '#fef9c3' },
+  reservoir:   { color: '#0ea5e9', bg: '#e0f2fe' },
+  compost:     { color: '#a16207', bg: '#fef3c7' },
+  main:        { color: '#64748b', bg: '#f1f5f9' },
 }
 
 const ZONES = ['fish_tank', 'grow_bed', 'sump', 'greenhouse', 'reservoir', 'compost', 'main']
 const DEVICE_TYPES = ['pump', 'light', 'heater', 'fan', 'valve']
 
-// ── Device Card ───────────────────────────────────────────────────────────────
-
-function DeviceCard({ device, selected, onToggle, onClick }) {
-  const Icon = DEVICE_ICONS[device.device_type] || Zap
-  const color = DEVICE_COLORS[device.device_type] || 'var(--green-bright)'
-  const [loading, setLoading] = useState(false)
-
-  const handleToggle = async (e) => {
-    e.stopPropagation()
-    setLoading(true)
-    await onToggle(device.id, !device.is_on)
-    setLoading(false)
-  }
-
-  return (
-    <div
-      className={`card device-card ${device.is_on ? 'device-on' : ''} ${selected ? 'device-selected' : ''}`}
-      style={{ '--dcolor': color, cursor: 'pointer' }}
-      onClick={() => onClick(device)}
-    >
-      <div className="device-card-top">
-        <div className="device-icon-wrap"
-          style={{
-            background: device.is_on ? color + '22' : 'var(--bg-elevated)',
-            borderColor: device.is_on ? color : 'var(--border)'
-          }}>
-          <Icon size={22} style={{ color: device.is_on ? color : 'var(--text-dim)' }} />
-        </div>
-        <label className="toggle" onClick={e => e.stopPropagation()}>
-          <input type="checkbox" checked={!!device.is_on} onChange={handleToggle} disabled={loading} />
-          <span className="toggle-track" />
-        </label>
-      </div>
-
-      <div className="device-name">{device.name}</div>
-      <div className="device-meta">
-        <span className="device-type-tag">{device.device_type}</span>
-        <span className="device-zone-tag">{device.zone}</span>
-      </div>
-
-      <div className={`device-status-row ${device.is_on ? 'status-on' : 'status-off'}`}>
-        <span className="status-dot" />
-        {device.is_on ? 'Running' : 'Standby'}
-        {device.auto_mode ? <span className="auto-badge">AUTO</span> : null}
-      </div>
-
-      {device.gpio_pin && <div className="device-pin">GPIO {device.gpio_pin}</div>}
-    </div>
-  )
-}
-
 // ── Device Detail Panel ───────────────────────────────────────────────────────
 
-function DeviceDetailPanel({ device, onClose, onDelete, onSave }) {
+function DeviceDetailPanel({ device, onClose, onDelete, onSave, onToggle }) {
   const [form, setForm] = useState({
     name:        device.name,
     device_type: device.device_type,
@@ -87,7 +45,7 @@ function DeviceDetailPanel({ device, onClose, onDelete, onSave }) {
   const [saving, setSaving] = useState(false)
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }))
   const Icon = DEVICE_ICONS[device.device_type] || Zap
-  const color = DEVICE_COLORS[device.device_type] || 'var(--green-bright)'
+  const color = DEVICE_COLORS[device.device_type] || '#6dcc87'
 
   const handleSave = async () => {
     setSaving(true)
@@ -105,9 +63,7 @@ function DeviceDetailPanel({ device, onClose, onDelete, onSave }) {
 
   const handleDelete = async () => {
     if (!confirm(`Delete "${device.name}"? This will also remove all associated schedules.`)) return
-    // Delete schedules referencing this device
     await fetch(`/api/schedules/by-device/${device.id}`, { method: 'DELETE' })
-    // Delete device
     await fetch(`/api/devices/${device.id}`, { method: 'DELETE' })
     onDelete()
   }
@@ -127,27 +83,30 @@ function DeviceDetailPanel({ device, onClose, onDelete, onSave }) {
 
       <div className="zone-detail-body">
 
-        {/* Status */}
         <div className="zone-detail-stat">
           <span className="zone-detail-stat-label">Status</span>
-          <span className={`device-status-row ${device.is_on ? 'status-on' : 'status-off'}`}
-            style={{ margin: 0 }}>
-            <span className="status-dot" />
-            {device.is_on ? 'Running' : 'Standby'}
-          </span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <span className={`device-status-row ${device.is_on ? 'status-on' : 'status-off'}`}
+              style={{ margin: 0 }}>
+              <span className="status-dot" />
+              {device.is_on ? 'Running' : 'Standby'}
+            </span>
+            <label className="toggle" style={{ marginLeft: 8 }}>
+              <input type="checkbox" checked={!!device.is_on}
+                onChange={e => onToggle(device.id, e.target.checked)} />
+              <span className="toggle-track" />
+            </label>
+          </div>
         </div>
 
-        {/* Edit fields */}
         <div className="zone-detail-section">
           <h4>Edit Device</h4>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-
             <div className="form-group">
               <label className="form-label">Name</label>
               <input className="form-input" value={form.name}
                 onChange={e => set('name', e.target.value)} />
             </div>
-
             <div className="form-group">
               <label className="form-label">Type</label>
               <select className="form-select" value={form.device_type}
@@ -155,7 +114,6 @@ function DeviceDetailPanel({ device, onClose, onDelete, onSave }) {
                 {DEVICE_TYPES.map(t => <option key={t} value={t}>{t}</option>)}
               </select>
             </div>
-
             <div className="form-group">
               <label className="form-label">Zone</label>
               <select className="form-select" value={form.zone}
@@ -163,19 +121,16 @@ function DeviceDetailPanel({ device, onClose, onDelete, onSave }) {
                 {ZONES.map(z => <option key={z} value={z}>{z}</option>)}
               </select>
             </div>
-
             <div className="form-group">
               <label className="form-label">GPIO Pin</label>
               <input className="form-input" type="number" placeholder="e.g. 17"
                 value={form.gpio_pin} onChange={e => set('gpio_pin', e.target.value)} />
             </div>
-
             <div className="form-group">
               <label className="form-label">Notes</label>
               <input className="form-input" placeholder="Optional..."
                 value={form.notes} onChange={e => set('notes', e.target.value)} />
             </div>
-
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between',
               padding: '8px 12px', background: 'var(--bg-elevated)', borderRadius: 'var(--radius-sm)' }}>
               <span style={{ fontSize: 12, color: 'var(--text-secondary)' }}>Auto Mode</span>
@@ -185,7 +140,6 @@ function DeviceDetailPanel({ device, onClose, onDelete, onSave }) {
                 <span className="toggle-track" />
               </label>
             </div>
-
           </div>
         </div>
 
@@ -194,7 +148,7 @@ function DeviceDetailPanel({ device, onClose, onDelete, onSave }) {
           <Save size={13} /> {saving ? 'Saving...' : 'Save Changes'}
         </button>
 
-        <button className="btn btn-danger" style={{ width: '100%' }}
+        <button className="btn btn-danger" style={{ width: '100%', marginTop: 8 }}
           onClick={handleDelete}>
           <Trash2 size={13} /> Delete Device
         </button>
@@ -282,7 +236,6 @@ export default function Devices() {
   const [selected, setSelected] = useState(null)
   const [loading, setLoading] = useState(true)
   const [showAdd, setShowAdd] = useState(false)
-  const [filter, setFilter] = useState('all')
 
   const load = async () => {
     const data = await fetchDevices().catch(() => [])
@@ -299,10 +252,16 @@ export default function Devices() {
   const handleToggle = async (id, is_on) => {
     await toggleDevice(id, is_on)
     setDevices(ds => ds.map(d => d.id === id ? { ...d, is_on: is_on ? 1 : 0 } : d))
+    if (selected?.id === id) setSelected(s => ({ ...s, is_on: is_on ? 1 : 0 }))
   }
 
-  const zones = ['all', ...new Set(devices.map(d => d.zone))]
-  const filtered = filter === 'all' ? devices : devices.filter(d => d.zone === filter)
+  // Group by zone
+  const grouped = devices.reduce((acc, d) => {
+    if (!acc[d.zone]) acc[d.zone] = []
+    acc[d.zone].push(d)
+    return acc
+  }, {})
+
   const onCount = devices.filter(d => d.is_on).length
 
   return (
@@ -310,7 +269,7 @@ export default function Devices() {
       <div className="page-header">
         <div>
           <h1 className="page-title">Devices</h1>
-          <p className="page-subtitle">{onCount} of {devices.length} devices running</p>
+          <p className="page-subtitle">{onCount} of {devices.length} running · click a row to inspect</p>
         </div>
         <div style={{ display: 'flex', gap: 8 }}>
           <button className="btn btn-ghost" onClick={load}><RefreshCw size={14} /> Refresh</button>
@@ -318,33 +277,96 @@ export default function Devices() {
         </div>
       </div>
 
-      {/* Zone filter tabs */}
-      <div className="zone-tabs" style={{ marginBottom: 20 }}>
-        {zones.map(z => (
-          <button key={z} className={`chart-tab ${filter === z ? 'active' : ''}`}
-            onClick={() => setFilter(z)}>
-            {z}
-          </button>
-        ))}
-      </div>
+      <div style={{ display: 'flex', flex: 1, overflow: 'hidden',
+        border: '1px solid var(--border)', borderRadius: 'var(--radius-lg)' }}>
 
-      {/* Cards + side panel */}
-      <div style={{ display: 'flex', gap: 0, flex: 1, overflow: 'hidden' }}>
+        {/* Zone-grouped table */}
         <div style={{ flex: 1, overflowY: 'auto' }}>
           {loading ? (
-            <div className="grid-3">
-              {[...Array(6)].map((_, i) => <div key={i} className="skeleton" style={{ height: 160 }} />)}
-            </div>
+            <p style={{ padding: 20, color: 'var(--text-dim)' }}>Loading...</p>
           ) : (
-            <div className="grid-3" style={{ paddingRight: selected ? 16 : 0 }}>
-              {filtered.map(d => (
-                <DeviceCard key={d.id} device={d}
-                  selected={selected?.id === d.id}
-                  onToggle={handleToggle}
-                  onClick={dev => setSelected(selected?.id === dev.id ? null : dev)}
-                />
-              ))}
-            </div>
+            <table className="data-table">
+              <thead>
+                <tr>
+                  <th>Zone</th>
+                  <th>Device</th>
+                  <th>Type</th>
+                  <th>Status</th>
+                  <th>GPIO</th>
+                  <th>Auto</th>
+                </tr>
+              </thead>
+              <tbody>
+                {Object.entries(grouped).map(([zone, zoneDevices]) => {
+                  const zc = ZONE_COLORS[zone] || ZONE_COLORS.main
+                  return zoneDevices.map((d, i) => {
+                    const Icon = DEVICE_ICONS[d.device_type] || Zap
+                    const dcolor = DEVICE_COLORS[d.device_type] || '#6dcc87'
+                    const isSelected = selected?.id === d.id
+                    return (
+                      <tr key={d.id}
+                        onClick={() => setSelected(isSelected ? null : d)}
+                        style={{ cursor: 'pointer',
+                          background: isSelected ? 'var(--bg-elevated)' : '' }}>
+
+                        {i === 0 ? (
+                          <td rowSpan={zoneDevices.length}
+                            style={{ verticalAlign: 'middle', width: 120,
+                              borderLeft: `4px solid ${zc.color}`,
+                              background: zc.bg + '44' }}>
+                            <span style={{ fontFamily: 'var(--font-mono)', fontSize: 11,
+                              fontWeight: 700, color: zc.color,
+                              textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+                              {zone.replace(/_/g, ' ')}
+                            </span>
+                          </td>
+                        ) : null}
+
+                        <td>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                            <Icon size={13} style={{ color: dcolor }} />
+                            <span style={{ color: 'var(--text-primary)', fontWeight: 500 }}>
+                              {d.name}
+                            </span>
+                          </div>
+                        </td>
+
+                        <td>
+                          <span style={{ fontFamily: 'var(--font-mono)', fontSize: 11,
+                            color: dcolor, background: dcolor + '18',
+                            border: `1px solid ${dcolor}44`,
+                            padding: '2px 8px', borderRadius: 99 }}>
+                            {d.device_type}
+                          </span>
+                        </td>
+
+                        <td>
+                          <div className={`device-status-row ${d.is_on ? 'status-on' : 'status-off'}`}
+                            style={{ margin: 0 }}
+                            onClick={e => { e.stopPropagation(); handleToggle(d.id, !d.is_on) }}>
+                            <span className="status-dot" />
+                            {d.is_on ? 'Running' : 'Standby'}
+                          </div>
+                        </td>
+
+                        <td style={{ fontFamily: 'var(--font-mono)', fontSize: 11,
+                          color: 'var(--text-dim)' }}>
+                          {d.gpio_pin ? `GPIO ${d.gpio_pin}` : '—'}
+                        </td>
+
+                        <td>
+                          {d.auto_mode ? (
+                            <span style={{ fontSize: 10, padding: '2px 6px', borderRadius: 4,
+                              background: 'var(--blue-dim)', color: 'var(--blue)',
+                              fontFamily: 'var(--font-mono)' }}>AUTO</span>
+                          ) : <span style={{ color: 'var(--text-dim)' }}>—</span>}
+                        </td>
+                      </tr>
+                    )
+                  })
+                })}
+              </tbody>
+            </table>
           )}
         </div>
 
@@ -354,6 +376,7 @@ export default function Devices() {
             onClose={() => setSelected(null)}
             onDelete={() => { setSelected(null); load() }}
             onSave={() => load()}
+            onToggle={handleToggle}
           />
         )}
       </div>

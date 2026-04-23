@@ -1,7 +1,7 @@
 import sqlite3
 import os
 
-DB_PATH = os.environ.get("DB_PATH", "./aquaponics.db")
+DB_PATH = os.environ.get("DB_PATH", "./christopher.db")
 
 def get_db():
     conn = sqlite3.connect(DB_PATH)

@@ -5,10 +5,14 @@ A full-stack greenhouse & aquaponics management system. Monitor water quality, c
 ---
 
 ## Next to do:
-- Implement Sensors Page
+FRONTEND
 - Modify Dashboard to show Zones with sensors and devices inside
 - Update Schedules page to provide different views of the schedules
 - Update Zones page to have a List tab to accompany the map tab
+- Settings page has some styling issues (toggle buttons) and I want to add a "reset database" or something so I can start from scratch without having to manipulate files
+BACKEND
+- Claude was helping fix Zones page issues. Get back on that after 4:10pm
+- Ensure that backend is updating correctly (ie. all pages show current zones, unassigned devises/sensors show as unassigned, reasign option only allows reassign to current active zones, when someothing is deleted in one place, it is updated on all other pages as well)
 
 ## Features
 

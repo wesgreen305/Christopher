@@ -193,7 +193,10 @@ function AddZoneModal({ onClose, onAdd }) {
     const payload = {
       ...form,
       volume_liters: form.volume_liters ? parseFloat(form.volume_liters) : null,
-      pos_x: 60, pos_y: 60, width: 180, height: 130
+      pos_x: 60 + Math.random() * 200,
+      pos_y: 60 + Math.random() * 150,
+      width: 180,
+      height: 130
     }
     const r = await fetch('/api/zones/', {
       method: 'POST',
@@ -250,7 +253,48 @@ export default function Zones() {
   const [showAdd, setShowAdd] = useState(false)
   const canvasRef = useRef()
 
-  const load = async () => {
+  const fitToScreen = async (zoneList) => {
+    const list = zoneList || zones
+    if (list.length === 0) return
+
+    const CANVAS_W = 860
+    const CANVAS_H = 520
+    const PADDING = 24
+    const GAP = 16
+
+    const cols = Math.ceil(Math.sqrt(list.length))
+    const rows = Math.ceil(list.length / cols)
+
+    const blockW = Math.floor((CANVAS_W - PADDING * 2 - GAP * (cols - 1)) / cols)
+    const blockH = Math.floor((CANVAS_H - PADDING * 2 - GAP * (rows - 1)) / rows)
+
+    const updates = list.map((zone, i) => {
+      const col = i % cols
+      const row = Math.floor(i / cols)
+      return {
+        id: zone.id,
+        pos_x: PADDING + col * (blockW + GAP),
+        pos_y: PADDING + row * (blockH + GAP),
+        width: blockW,
+        height: blockH,
+      }
+    })
+
+    await Promise.all(updates.map(u =>
+      fetch(`/api/zones/${u.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ pos_x: u.pos_x, pos_y: u.pos_y, width: u.width, height: u.height })
+      })
+    ))
+
+    setZones(list.map(z => {
+      const u = updates.find(u => u.id === z.id)
+      return u ? { ...z, ...u } : z
+    }))
+  }
+
+  const load = async (autoFit = false) => {
     const [z, d] = await Promise.all([
       fetch('/api/zones/').then(r => r.json()).catch(() => []),
       fetch('/api/devices/').then(r => r.json()).catch(() => []),
@@ -261,17 +305,36 @@ export default function Zones() {
       const updated = z.find(zone => zone.id === selected.id)
       if (updated) setSelected(updated)
     }
+    if (autoFit && z.length > 0) await fitToScreen(z)
   }
 
-  useEffect(() => { load() }, [])
-
   const handleDragEnd = async (id, x, y) => {
+    const dragged = zones.find(z => z.id === id)
+    if (!dragged) return
+
+    const clampedX = Math.max(0, Math.min(x, 860 - dragged.width))
+    const clampedY = Math.max(0, Math.min(y, 600 - dragged.height))
+
+    const overlaps = zones.some(z => {
+      if (z.id === id) return false
+      return !(
+        clampedX + dragged.width <= z.pos_x ||
+        clampedX >= z.pos_x + z.width ||
+        clampedY + dragged.height <= z.pos_y ||
+        clampedY >= z.pos_y + z.height
+      )
+    })
+
+    const finalX = overlaps ? dragged.pos_x : clampedX
+    const finalY = overlaps ? dragged.pos_y : clampedY
+
     await fetch(`/api/zones/${id}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ pos_x: x, pos_y: y })
+      body: JSON.stringify({ pos_x: finalX, pos_y: finalY })
     })
-    setZones(zs => zs.map(z => z.id === id ? { ...z, pos_x: x, pos_y: y } : z))
+
+    setZones(zs => zs.map(z => z.id === id ? { ...z, pos_x: finalX, pos_y: finalY } : z))
   }
 
   const handleResizeEnd = async (id, width, height) => {
@@ -289,6 +352,8 @@ export default function Zones() {
     load()
   }
 
+  useEffect(() => { load(true) }, [])
+  
   return (
     <div className="page zones-page">
       <div className="page-header">
@@ -296,9 +361,14 @@ export default function Zones() {
           <h1 className="page-title">Zone Map</h1>
           <p className="page-subtitle">Drag to reposition · Corner to resize · Click to inspect</p>
         </div>
-        <button className="btn btn-primary" onClick={() => setShowAdd(true)}>
-          <Plus size={14} /> Add Zone
-        </button>
+        <div style={{ display: 'flex', gap: 8 }}>
+          <button className="btn btn-ghost" onClick={() => fitToScreen(zones)}>
+            <Layers size={14} /> Fit to Screen
+          </button>
+          <button className="btn btn-primary" onClick={() => setShowAdd(true)}>
+            <Plus size={14} /> Add Zone
+          </button>
+        </div>
       </div>
 
       <div className="zones-layout">
